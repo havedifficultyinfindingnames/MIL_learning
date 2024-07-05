@@ -180,7 +180,22 @@ end Int
 
 theorem sq_add_sq_eq_zero {α : Type*} [LinearOrderedRing α] (x y : α) :
     x ^ 2 + y ^ 2 = 0 ↔ x = 0 ∧ y = 0 := by
-  sorry
+  constructor
+  · intro h₀
+    by_contra! h₁
+    by_cases xeq0 : x = 0
+    · have yne0 : y ≠ 0 := h₁ xeq0
+      rw [xeq0] at h₀
+      simp at h₀
+      contradiction
+    · have : 0 < x ^ 2 := pow_two_pos_of_ne_zero xeq0
+      have : 0 ≤ y ^ 2 := sq_nonneg y
+      have : x ^ 2 + y ^ 2 > 0 := by apply add_pos_of_pos_of_nonneg _ this; assumption
+      rw [h₀] at this
+      simp at this
+  · rintro ⟨rfl, rfl⟩
+    norm_num
+
 namespace gaussInt
 
 def norm (x : gaussInt) :=
@@ -188,13 +203,19 @@ def norm (x : gaussInt) :=
 
 @[simp]
 theorem norm_nonneg (x : gaussInt) : 0 ≤ norm x := by
-  sorry
+  apply add_nonneg <;> apply sq_nonneg
+
 theorem norm_eq_zero (x : gaussInt) : norm x = 0 ↔ x = 0 := by
-  sorry
+  rw [norm, sq_add_sq_eq_zero, gaussInt.ext_iff]; rfl
+
 theorem norm_pos (x : gaussInt) : 0 < norm x ↔ x ≠ 0 := by
-  sorry
+  rw [lt_iff_le_and_ne, ne_comm, Ne, norm_eq_zero]
+  simp [norm_nonneg]
+
 theorem norm_mul (x y : gaussInt) : norm (x * y) = norm x * norm y := by
-  sorry
+  simp [norm]
+  ring
+
 def conj (x : gaussInt) : gaussInt :=
   ⟨x.re, -x.im⟩
 
@@ -246,7 +267,7 @@ theorem coe_natAbs_norm (x : gaussInt) : (x.norm.natAbs : ℤ) = x.norm :=
 theorem natAbs_norm_mod_lt (x y : gaussInt) (hy : y ≠ 0) :
     (x % y).norm.natAbs < y.norm.natAbs := by
   apply Int.ofNat_lt.1
-  simp only [Int.coe_natAbs, abs_of_nonneg, norm_nonneg]
+  simp only [Int.natCast_natAbs, abs_of_nonneg, norm_nonneg]
   apply norm_mod_lt x hy
 
 theorem not_norm_mul_left_lt_norm (x : gaussInt) {y : gaussInt} (hy : y ≠ 0) :
@@ -273,6 +294,6 @@ instance : EuclideanDomain gaussInt :=
     mul_left_not_lt := not_norm_mul_left_lt_norm }
 
 example (x : gaussInt) : Irreducible x ↔ Prime x :=
-  PrincipalIdealRing.irreducible_iff_prime
+  irreducible_iff_prime
 
 end gaussInt
