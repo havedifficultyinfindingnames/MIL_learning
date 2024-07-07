@@ -114,11 +114,10 @@ example {M : Type} [Monoid₁ M] {a b c : M} (hba : b ⋄ a = 𝟙) (hac : a ⋄
 
 
 lemma inv_eq_of_dia [Group₁ G] {a b : G} (h : a ⋄ b = 𝟙) : a⁻¹ = b :=
-  sorry
+  left_inv_eq_right_inv₁ (inv_dia a) h
 
-lemma dia_inv [Group₁ G] (a : G) : a ⋄ a⁻¹ = 𝟙 :=
-  sorry
-
+lemma dia_inv [Group₁ G] (a : G) : a ⋄ a⁻¹ = 𝟙 := by
+  rw [← inv_dia a⁻¹, inv_eq_of_dia (inv_dia a)]
 
 
 
@@ -174,20 +173,20 @@ attribute [simp] Group₃.inv_mul AddGroup₃.neg_add
 
 @[to_additive]
 lemma inv_eq_of_mul [Group₃ G] {a b : G} (h : a * b = 1) : a⁻¹ = b :=
-  sorry
+  left_inv_eq_right_inv' (Group₃.inv_mul a) h
 
 
 @[to_additive (attr := simp)]
 lemma Group₃.mul_inv {G : Type} [Group₃ G] {a : G} : a * a⁻¹ = 1 := by
-  sorry
+  rw [← inv_mul a⁻¹, inv_eq_of_mul (inv_mul a)]
 
 @[to_additive]
 lemma mul_left_cancel₃ {G : Type} [Group₃ G] {a b c : G} (h : a * b = a * c) : b = c := by
-  sorry
+  simpa [← mul_assoc₃] using congr_arg (a⁻¹ * ·) h
 
 @[to_additive]
 lemma mul_right_cancel₃ {G : Type} [Group₃ G] {a b c : G} (h : b*a = c*a) : b = c := by
-  sorry
+  simpa [mul_assoc₃] using congr_arg (· * a⁻¹) h
 
 class AddCommGroup₃ (G : Type) extends AddGroup₃ G, AddCommMonoid₃ G
 
@@ -205,7 +204,16 @@ class Ring₃ (R : Type) extends AddGroup₃ R, Monoid₃ R, MulZeroClass R wher
 instance {R : Type} [Ring₃ R] : AddCommGroup₃ R :=
 { Ring₃.toAddGroup₃ with
   add_comm := by
-    sorry }
+    intro a b
+    have : a + (a + b + b) = a + (b + a + b) := calc
+      a + (a + b + b) = (a + a) + (b + b) := by simp [add_assoc₃, add_assoc₃]
+      _ = (1 * a + 1 * a) + (1 * b + 1 * b) := by simp
+      _ = (1 + 1) * a + (1 + 1) * b := by simp [Ring₃.right_distrib]
+      _ = (1 + 1) * (a + b) := by simp [Ring₃.left_distrib]
+      _ = 1 * (a + b) + 1 * (a + b) := by simp [Ring₃.right_distrib]
+      _ = (a + b) + (a + b) := by simp
+      _ = a + (b + a + b) := by simp [add_assoc₃]
+    exact add_right_cancel₃ (add_left_cancel₃ this) }
 
 instance : Ring₃ ℤ where
   add := (· + ·)
@@ -309,3 +317,15 @@ instance : AddMonoid₄ ℤ where
     by rw [Int.add_mul, Int.add_comm, Int.one_mul]
 
 example (n : ℕ) (m : ℤ) : SMul.smul (self := mySMul) n m = n * m := rfl
+
+class LT₁ (α : Type) where
+  /-- The Less-Than relation -/
+  lt : α → α → Prop
+
+@[inherit_doc] infix:50 " <₁ " => LT₁.lt
+
+class PreOrder₂ (α : Type) extends LE₁ α, LT₁ α where
+  le_refl : ∀ a : α, a ≤₁ a
+  le_trans : ∀ a b c : α, a ≤₁ b → b ≤₁ c → a ≤₁ c
+  lt := fun a b ↦ a ≤₁ b ∧ ¬b ≤₁ a
+  lt_iff_le_not_le : ∀ a b : α, a <₁ b ↔ a ≤₁ b ∧ ¬b ≤₁ a := by intros; rfl
